@@ -1,0 +1,7 @@
+displayName: Super Simple Traefik Cache
+summary: This is just a test for a super simple Traefik cache plugin.
+type: middleware
+import: github.com/yerTools/traefik_cache
+compatibility: TODO
+testData:
+  path: /tmp
