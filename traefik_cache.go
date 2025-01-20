@@ -3,6 +3,7 @@ package traefik_cache
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -15,6 +16,7 @@ type Config struct {
 }
 
 func CreateConfig() *Config {
+	log.Println("CreateConfig")
 	return &Config{}
 }
 
@@ -32,6 +34,9 @@ type cache struct {
 }
 
 func New(_ context.Context, next http.Handler, cfg *Config, name string) (http.Handler, error) {
+	log.Printf("New: %s\n", name)
+
+	log.Println("Creating ristretto cache")
 	ristrettoCache, err := ristretto.NewCache(&ristretto.Config[uint64, cacheValue]{
 		NumCounters: 1e6,     // number of keys to track frequency of (1M).
 		MaxCost:     1 << 28, // maximum cost of cache (256MiB).
@@ -53,17 +58,22 @@ func New(_ context.Context, next http.Handler, cfg *Config, name string) (http.H
 
 // ServeHTTP serves an HTTP request.
 func (c *cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Printf("ServeHTTP: %s\n", r.URL.String())
+
 	w.Header().Set("X-Treafik-Cache-Status", "miss")
 
+	log.Println("Calculating key")
 	key, ok := calculateKey(r)
 	if !ok {
 		w.Header().Set("X-Treafik-Cache-Cacheable", "false")
 		c.next.ServeHTTP(w, r)
 		return
 	}
+	log.Printf("Key: %d\n", key)
 
 	cached, ok := c.cache.Get(key)
 	if ok {
+		log.Println("Cache hit")
 		ttl, ok := c.cache.GetTTL(key)
 		if !ok {
 			ttl = 0
@@ -93,6 +103,8 @@ func (c *cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("Cache miss")
+
 	w.Header().Set("X-Treafik-Cache-Cacheable", "true")
 	w.Header().Set("X-Treafik-Cache-Key", string(key))
 
@@ -104,6 +116,7 @@ func (c *cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Body:    make([]byte, 0, 1024),
 		},
 	}
+	log.Println("Calling next ServeHTTP")
 	c.next.ServeHTTP(vw, r)
 
 	vw.value.Headers = w.Header().Clone()
@@ -116,6 +129,7 @@ func (c *cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	log.Println("Setting cache")
 	c.cache.SetWithTTL(key, vw.value, vw.value.Cost, 10*time.Second)
 }
 
