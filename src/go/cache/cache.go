@@ -2,11 +2,11 @@ package cache
 
 import "time"
 
-type Cache[K StoreKey, V any] struct {
+type Cache[K any, V any] struct {
 	store *store[V]
 }
 
-func keyToHash[K StoreKey](key K) StoreKey {
+func keyToHash[K any](key K) StoreKey {
 	switch k := any(key).(type) {
 	case uint64:
 		return StoreKey{k, 0}
@@ -17,7 +17,7 @@ func keyToHash[K StoreKey](key K) StoreKey {
 	}
 }
 
-func NewCache[K StoreKey, V any](bucketSize time.Duration) *Cache[K, V] {
+func NewCache[K any, V any](bucketSize time.Duration) *Cache[K, V] {
 	c := &Cache[K, V]{
 		store: NewStore[V](time.Now(), bucketSize),
 	}
