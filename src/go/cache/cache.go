@@ -2,23 +2,12 @@ package cache
 
 import "time"
 
-type Cache[K any, V any] struct {
+type Cache[V any] struct {
 	store *store[V]
 }
 
-func keyToHash[K any](key K) StoreKey {
-	switch k := any(key).(type) {
-	case uint64:
-		return StoreKey{k, 0}
-	case StoreKey:
-		return k
-	default:
-		panic("CacheKey type not supported")
-	}
-}
-
-func NewCache[K any, V any](bucketSize time.Duration) *Cache[K, V] {
-	c := &Cache[K, V]{
+func NewCache[V any](bucketSize time.Duration) *Cache[V] {
+	c := &Cache[V]{
 		store: NewStore[V](time.Now(), bucketSize),
 	}
 
@@ -32,11 +21,11 @@ func NewCache[K any, V any](bucketSize time.Duration) *Cache[K, V] {
 	return c
 }
 
-func (c *Cache[K, V]) Cost() int64 {
+func (c *Cache[V]) Cost() int64 {
 	return c.store.Cost()
 }
 
-func (c *Cache[K, V]) Set(key K, value V, cost int64, ttl time.Duration) bool {
+func (c *Cache[V]) Set(key StoreKey, value V, cost int64, ttl time.Duration) bool {
 	if c == nil {
 		return false
 	}
@@ -52,10 +41,8 @@ func (c *Cache[K, V]) Set(key K, value V, cost int64, ttl time.Duration) bool {
 		expiration = now.Add(ttl)
 	}
 
-	hashKey := keyToHash(key)
-
 	i := &StoreItem[V]{
-		Key:        hashKey,
+		Key:        key,
 		Value:      value,
 		Cost:       cost,
 		Expiration: expiration,
@@ -65,10 +52,8 @@ func (c *Cache[K, V]) Set(key K, value V, cost int64, ttl time.Duration) bool {
 	return true
 }
 
-func (c *Cache[K, V]) Get(key K) (StoreItem[V], bool) {
-	hashKey := keyToHash(key)
-
-	item, ok := c.store.Get(time.Now(), hashKey)
+func (c *Cache[V]) Get(key StoreKey) (StoreItem[V], bool) {
+	item, ok := c.store.Get(time.Now(), key)
 	if !ok {
 		var zeroValue StoreItem[V]
 		return zeroValue, false

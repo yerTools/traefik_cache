@@ -30,14 +30,14 @@ type cacheValue struct {
 type cachePlugin struct {
 	config *Config
 	next   http.Handler
-	cache  *cache.Cache[cache.StoreKey, cacheValue]
+	cache  *cache.Cache[cacheValue]
 }
 
 func New(_ context.Context, next http.Handler, cfg *Config, name string) (http.Handler, error) {
 	log.Printf("New: %s\n", name)
 
 	log.Println("Creating cache")
-	cache := cache.NewCache[cache.StoreKey, cacheValue](time.Microsecond * 500)
+	cache := cache.NewCache[cacheValue](time.Microsecond * 500)
 
 	c := &cachePlugin{
 		config: cfg,
