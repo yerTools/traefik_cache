@@ -14,12 +14,14 @@ func fixedTime() time.Time {
 
 func TestStoreSetGet(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item := &cache.StoreItem[int]{
-		Key:   cache.StoreKey{Key: 1, Conflict: 0},
-		Value: 42,
-		Cost:  1,
+	item := &cache.StoreItem{
+		Key: cache.StoreKey{Key: 1, Conflict: 0},
+		Value: cache.CacheValue{
+			Status: 42,
+		},
+		Cost: 1,
 	}
 	store.Set(now, item)
 
@@ -28,18 +30,18 @@ func TestStoreSetGet(t *testing.T) {
 		t.Fatalf("Expected item to be present")
 	}
 
-	if retrieved.Value != item.Value {
-		t.Fatalf("Expected value %d, got %d", item.Value, retrieved.Value)
+	if retrieved.Value.Status != item.Value.Status {
+		t.Fatalf("Expected value %d, got %d", item.Value.Status, retrieved.Value.Status)
 	}
 }
 
 func TestStoreRemove(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item := &cache.StoreItem[int]{
+	item := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 2, Conflict: 0},
-		Value: 84,
+		Value: cache.CacheValue{Status: 84},
 		Cost:  1,
 	}
 	store.Set(now, item)
@@ -54,11 +56,11 @@ func TestStoreRemove(t *testing.T) {
 
 func TestStorePurgeExpired(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item := &cache.StoreItem[int]{
+	item := &cache.StoreItem{
 		Key:        cache.StoreKey{Key: 3, Conflict: 0},
-		Value:      168,
+		Value:      cache.CacheValue{Status: 168},
 		Cost:       1,
 		Expiration: now.Add(-time.Minute), // expired item
 	}
@@ -74,16 +76,16 @@ func TestStorePurgeExpired(t *testing.T) {
 
 func TestStoreCost(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item1 := &cache.StoreItem[int]{
+	item1 := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 4, Conflict: 0},
-		Value: 100,
+		Value: cache.CacheValue{Status: 100},
 		Cost:  10,
 	}
-	item2 := &cache.StoreItem[int]{
+	item2 := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 5, Conflict: 0},
-		Value: 200,
+		Value: cache.CacheValue{Status: 200},
 		Cost:  20,
 	}
 
@@ -98,11 +100,11 @@ func TestStoreCost(t *testing.T) {
 
 func TestConcurrentAccess(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item := &cache.StoreItem[int]{
+	item := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 6, Conflict: 0},
-		Value: 300,
+		Value: cache.CacheValue{Status: 300},
 		Cost:  30,
 	}
 
@@ -126,11 +128,11 @@ func TestConcurrentAccess(t *testing.T) {
 
 func TestBoundaryExpiration(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item := &cache.StoreItem[int]{
+	item := &cache.StoreItem{
 		Key:        cache.StoreKey{Key: 7, Conflict: 0},
-		Value:      400,
+		Value:      cache.CacheValue{Status: 400},
 		Cost:       1,
 		Expiration: now, // expires exactly now
 	}
@@ -144,16 +146,16 @@ func TestBoundaryExpiration(t *testing.T) {
 
 func TestMultipleConflictKeys(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item1 := &cache.StoreItem[int]{
+	item1 := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 8, Conflict: 0},
-		Value: 500,
+		Value: cache.CacheValue{Status: 500},
 		Cost:  1,
 	}
-	item2 := &cache.StoreItem[int]{
+	item2 := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 8, Conflict: 1},
-		Value: 600,
+		Value: cache.CacheValue{Status: 600},
 		Cost:  1,
 	}
 
@@ -161,19 +163,19 @@ func TestMultipleConflictKeys(t *testing.T) {
 	store.Set(now, item2)
 
 	retrieved1, ok1 := store.Get(now, item1.Key)
-	if !ok1 || retrieved1.Value != item1.Value {
-		t.Fatalf("Expected value %d, got %d", item1.Value, retrieved1.Value)
+	if !ok1 || retrieved1.Value.Status != item1.Value.Status {
+		t.Fatalf("Expected value %d, got %d", item1.Value.Status, retrieved1.Value.Status)
 	}
 
 	retrieved2, ok2 := store.Get(now, item2.Key)
-	if !ok2 || retrieved2.Value != item2.Value {
-		t.Fatalf("Expected value %d, got %d", item2.Value, retrieved2.Value)
+	if !ok2 || retrieved2.Value.Status != item2.Value.Status {
+		t.Fatalf("Expected value %d, got %d", item2.Value.Status, retrieved2.Value.Status)
 	}
 }
 
 func TestEmptyStoreOperations(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
 	_, ok := store.Get(now, cache.StoreKey{Key: 9, Conflict: 0})
 	if ok {
@@ -185,25 +187,25 @@ func TestEmptyStoreOperations(t *testing.T) {
 
 func TestUpdateExistingItem(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item := &cache.StoreItem[int]{
+	item := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 10, Conflict: 0},
-		Value: 700,
+		Value: cache.CacheValue{Status: 700},
 		Cost:  1,
 	}
 	store.Set(now, item)
 
-	updatedItem := &cache.StoreItem[int]{
+	updatedItem := &cache.StoreItem{
 		Key:   item.Key,
-		Value: 800,
+		Value: cache.CacheValue{Status: 800},
 		Cost:  2,
 	}
 	store.Set(now, updatedItem)
 
 	retrieved, ok := store.Get(now, updatedItem.Key)
-	if !ok || retrieved.Value != updatedItem.Value {
-		t.Fatalf("Expected updated value %d, got %d", updatedItem.Value, retrieved.Value)
+	if !ok || retrieved.Value.Status != updatedItem.Value.Status {
+		t.Fatalf("Expected updated value %d, got %d", updatedItem.Value.Status, retrieved.Value.Status)
 	}
 
 	expectedCost := updatedItem.Cost
@@ -214,11 +216,11 @@ func TestUpdateExistingItem(t *testing.T) {
 
 func TestDifferentBucketSizes(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Second)
+	store := cache.NewStore(now, time.Second)
 
-	item := &cache.StoreItem[int]{
+	item := &cache.StoreItem{
 		Key:        cache.StoreKey{Key: 11, Conflict: 0},
-		Value:      900,
+		Value:      cache.CacheValue{Status: 900},
 		Cost:       1,
 		Expiration: now.Add(time.Second),
 	}
@@ -235,11 +237,11 @@ func TestDifferentBucketSizes(t *testing.T) {
 
 func TestCostAfterRemoval(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item := &cache.StoreItem[int]{
+	item := &cache.StoreItem{
 		Key:   cache.StoreKey{Key: 12, Conflict: 0},
-		Value: 1000,
+		Value: cache.CacheValue{Status: 1000},
 		Cost:  10,
 	}
 	store.Set(now, item)
@@ -253,17 +255,17 @@ func TestCostAfterRemoval(t *testing.T) {
 
 func TestClearStore(t *testing.T) {
 	now := fixedTime()
-	store := cache.NewStore[int](now, time.Minute)
+	store := cache.NewStore(now, time.Minute)
 
-	item1 := &cache.StoreItem[int]{
+	item1 := &cache.StoreItem{
 		Key:        cache.StoreKey{Key: 13, Conflict: 0},
-		Value:      1100,
+		Value:      cache.CacheValue{Status: 1100},
 		Cost:       10,
 		Expiration: now.Add(time.Minute),
 	}
-	item2 := &cache.StoreItem[int]{
+	item2 := &cache.StoreItem{
 		Key:        cache.StoreKey{Key: 14, Conflict: 0},
-		Value:      1200,
+		Value:      cache.CacheValue{Status: 1200},
 		Cost:       20,
 		Expiration: now.Add(time.Minute),
 	}

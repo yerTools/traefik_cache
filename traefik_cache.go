@@ -21,23 +21,17 @@ func CreateConfig() *Config {
 	return &Config{}
 }
 
-type cacheValue struct {
-	Status  int
-	Headers map[string][]string
-	Body    []byte
-}
-
 type cachePlugin struct {
 	config *Config
 	next   http.Handler
-	cache  *cache.Cache[cacheValue]
+	cache  *cache.Cache
 }
 
 func New(_ context.Context, next http.Handler, cfg *Config, name string) (http.Handler, error) {
 	log.Printf("New: %s\n", name)
 
 	log.Println("Creating cache")
-	cache := cache.NewCache[cacheValue](time.Microsecond * 500)
+	cache := cache.NewCache(time.Microsecond * 500)
 
 	c := &cachePlugin{
 		config: cfg,
@@ -100,7 +94,7 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	vw := &cacheValueWriter{
 		dest: w,
-		value: cacheValue{
+		value: cache.CacheValue{
 			Status:  0,
 			Headers: make(map[string][]string),
 			Body:    make([]byte, 0, 1024),
@@ -124,7 +118,7 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type cacheValueWriter struct {
-	value cacheValue
+	value cache.CacheValue
 	dest  http.ResponseWriter
 }
 

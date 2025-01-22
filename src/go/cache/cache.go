@@ -2,13 +2,19 @@ package cache
 
 import "time"
 
-type Cache[V any] struct {
-	store *store[V]
+type Cache struct {
+	store *store
 }
 
-func NewCache[V any](bucketSize time.Duration) *Cache[V] {
-	c := &Cache[V]{
-		store: NewStore[V](time.Now(), bucketSize),
+type CacheValue struct {
+	Status  int
+	Headers map[string][]string
+	Body    []byte
+}
+
+func NewCache(bucketSize time.Duration) *Cache {
+	c := &Cache{
+		store: NewStore(time.Now(), bucketSize),
 	}
 
 	t := time.NewTicker(bucketSize)
@@ -21,11 +27,11 @@ func NewCache[V any](bucketSize time.Duration) *Cache[V] {
 	return c
 }
 
-func (c *Cache[V]) Cost() int64 {
+func (c *Cache) Cost() int64 {
 	return c.store.Cost()
 }
 
-func (c *Cache[V]) Set(key StoreKey, value V, cost int64, ttl time.Duration) bool {
+func (c *Cache) Set(key StoreKey, value CacheValue, cost int64, ttl time.Duration) bool {
 	if c == nil {
 		return false
 	}
@@ -41,7 +47,7 @@ func (c *Cache[V]) Set(key StoreKey, value V, cost int64, ttl time.Duration) boo
 		expiration = now.Add(ttl)
 	}
 
-	i := &StoreItem[V]{
+	i := &StoreItem{
 		Key:        key,
 		Value:      value,
 		Cost:       cost,
@@ -52,10 +58,10 @@ func (c *Cache[V]) Set(key StoreKey, value V, cost int64, ttl time.Duration) boo
 	return true
 }
 
-func (c *Cache[V]) Get(key StoreKey) (StoreItem[V], bool) {
+func (c *Cache) Get(key StoreKey) (StoreItem, bool) {
 	item, ok := c.store.Get(time.Now(), key)
 	if !ok {
-		var zeroValue StoreItem[V]
+		var zeroValue StoreItem
 		return zeroValue, false
 	}
 
