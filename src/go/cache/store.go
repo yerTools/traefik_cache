@@ -212,7 +212,7 @@ func (m *concurrentMap) Set(now time.Time, item *StoreItem) {
 		item.Cost += StoreItemExpirationOverhead
 	}
 
-	if !item.Expiration.IsZero() && now.Before(item.Expiration) {
+	if !item.Expiration.IsZero() && !item.Expiration.After(now) {
 		return
 	}
 

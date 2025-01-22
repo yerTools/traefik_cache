@@ -55,7 +55,9 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		c.next.ServeHTTP(w, r)
 		return
 	}
+
 	log.Printf("Key: %d\n", key)
+	log.Printf("Current cost: %d\n", c.cache.Cost())
 
 	cached, ok := c.cache.Get(key)
 	if ok {

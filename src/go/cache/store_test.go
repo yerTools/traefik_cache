@@ -54,6 +54,53 @@ func TestStoreRemove(t *testing.T) {
 	}
 }
 
+func TestStoreExpiration(t *testing.T) {
+	now := fixedTime()
+	store := cache.NewStore(now, 500*time.Millisecond)
+
+	item := &cache.StoreItem{
+		Key: cache.StoreKey{Key: 269, Conflict: 161},
+		Value: cache.CacheValue{
+			Status: 161,
+		},
+		Cost:       1,
+		Expiration: now.Add(5 * time.Second),
+	}
+	store.Set(now, item)
+
+	retrieved, ok := store.Get(now, item.Key)
+	if !ok {
+		t.Fatalf("Expected item to be present")
+	}
+
+	if retrieved.Value.Status != item.Value.Status {
+		t.Fatalf("Expected value %d, got %d", item.Value.Status, retrieved.Value.Status)
+	}
+
+	retrieved, ok = store.Get(now.Add(time.Second), item.Key)
+	if !ok {
+		t.Fatalf("Expected item to be present")
+	}
+
+	if retrieved.Value.Status != item.Value.Status {
+		t.Fatalf("Expected value %d, got %d", item.Value.Status, retrieved.Value.Status)
+	}
+
+	retrieved, ok = store.Get(now.Add(3*time.Second), item.Key)
+	if !ok {
+		t.Fatalf("Expected item to be present")
+	}
+
+	if retrieved.Value.Status != item.Value.Status {
+		t.Fatalf("Expected value %d, got %d", item.Value.Status, retrieved.Value.Status)
+	}
+
+	_, ok = store.Get(now.Add(5*time.Second), item.Key)
+	if ok {
+		t.Fatalf("Expected item to be purged")
+	}
+}
+
 func TestStorePurgeExpired(t *testing.T) {
 	now := fixedTime()
 	store := cache.NewStore(now, time.Minute)
