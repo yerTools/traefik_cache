@@ -3,7 +3,6 @@ package traefik_cache
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,7 +16,6 @@ type Config struct {
 }
 
 func CreateConfig() *Config {
-	log.Println("CreateConfig")
 	return &Config{}
 }
 
@@ -28,9 +26,6 @@ type cachePlugin struct {
 }
 
 func New(_ context.Context, next http.Handler, cfg *Config, name string) (http.Handler, error) {
-	log.Printf("New: %s\n", name)
-
-	log.Println("Creating cache")
 	cache := cache.NewCache(time.Millisecond * 500)
 
 	c := &cachePlugin{
@@ -44,11 +39,8 @@ func New(_ context.Context, next http.Handler, cfg *Config, name string) (http.H
 
 // ServeHTTP serves an HTTP request.
 func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("ServeHTTP: %s\n", r.URL.String())
-
 	w.Header().Set("X-Treafik-Cache-Status", "miss")
 
-	log.Println("Calculating key")
 	key, ok := calculateKey(r)
 	if !ok {
 		w.Header().Set("X-Treafik-Cache-Cacheable", "false")
@@ -56,13 +48,8 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Key: %d\n", key)
-	log.Printf("Current cost: %d\n", c.cache.Cost())
-
 	cached, ok := c.cache.Get(key)
 	if ok {
-		log.Println("Cache hit")
-
 		deleteKeys := make([]string, 0, len(cached.Value.Headers))
 		for k := range w.Header() {
 			_, ok := cached.Value.Headers[k]
@@ -88,8 +75,6 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Cache miss")
-
 	w.Header().Set("X-Treafik-Cache-Cacheable", "true")
 	w.Header().Set("X-Treafik-Cache-Key", fmt.Sprintf("%d:%d", key.Key, key.Conflict))
 	w.Header().Set("X-Treafik-Cache-Allocation", strconv.FormatInt(c.cache.Cost(), 10))
@@ -102,7 +87,6 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Body:    make([]byte, 0, 1024),
 		},
 	}
-	log.Println("Calling next ServeHTTP")
 	c.next.ServeHTTP(vw, r)
 
 	vw.value.Headers = w.Header().Clone()
@@ -115,7 +99,6 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Println("Setting cache")
 	c.cache.Set(key, vw.value, cost, 0)
 }
 
