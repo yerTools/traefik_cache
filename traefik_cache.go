@@ -31,7 +31,7 @@ func New(_ context.Context, next http.Handler, cfg *Config, name string) (http.H
 	log.Printf("New: %s\n", name)
 
 	log.Println("Creating cache")
-	cache := cache.NewCache(time.Microsecond * 500)
+	cache := cache.NewCache(time.Millisecond * 500)
 
 	c := &cachePlugin{
 		config: cfg,
