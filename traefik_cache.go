@@ -116,7 +116,7 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Setting cache")
-	c.cache.Set(key, vw.value, cost, 5*time.Second)
+	c.cache.Set(key, vw.value, cost, 0)
 }
 
 type cacheValueWriter struct {
