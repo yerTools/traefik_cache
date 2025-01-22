@@ -63,11 +63,6 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		log.Println("Cache hit")
 
-		w.Header().Set("X-Treafik-Cache-Status", "hit")
-		w.Header().Set("X-Treafik-Cache-Cost", strconv.FormatInt(cached.Cost, 10))
-		w.Header().Set("X-Treafik-Cache-Expiration", cached.Expiration.Format(time.RFC3339Nano))
-		w.Header().Set("X-Treafik-Cache-Allocation", strconv.FormatInt(c.cache.Cost(), 10))
-
 		deleteKeys := make([]string, 0, len(cached.Value.Headers))
 		for k := range w.Header() {
 			_, ok := cached.Value.Headers[k]
@@ -81,6 +76,11 @@ func (c *cachePlugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for k, v := range cached.Value.Headers {
 			w.Header()[k] = v
 		}
+
+		w.Header().Set("X-Treafik-Cache-Status", "hit")
+		w.Header().Set("X-Treafik-Cache-Cost", strconv.FormatInt(cached.Cost, 10))
+		w.Header().Set("X-Treafik-Cache-Expiration", cached.Expiration.Format(time.RFC3339Nano))
+		w.Header().Set("X-Treafik-Cache-Allocation", strconv.FormatInt(c.cache.Cost(), 10))
 
 		w.WriteHeader(cached.Value.Status)
 		w.Write(cached.Value.Body)
